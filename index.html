@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="pure-min.css"/>
+    <style type="text/css">
+        #content {
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+        }
+
+        #output {
+            resize: none;
+            width: 90%;
+            font-size: 12px;
+        }
+    </style>
+    <title>APK SIGNER</title>
+</head>
+<body>
+<div id="content">
+    <h1>Android APK SIGNER</h1>
+
+    <form class="pure-form pure-form-aligned">
+        <fieldset>
+            <div class="pure-control-group">
+                <label for="profile">Profile</label>
+                <select id="profile" class="pure-input-1-2">
+                </select>
+            </div>
+            <div class="pure-control-group">
+                <label for="beSignedApkPath">Be Signed APK Path</label>
+                <input id="beSignedApkPath" type="text" placeholder="/Apk/some.unsigned.apk" class="pure-input-1-2">
+            </div>
+
+            <div class="pure-control-group">
+                <label for="signToWhere">Sign To Where</label>
+                <input id="signToWhere" type="text" placeholder="/Apk/some.apk" class="pure-input-1-2">
+            </div>
+
+            <div class="pure-control-group">
+                <label for="keyStorePath">KeyStore Path</label>
+                <input id="keyStorePath" type="text" placeholder="/android/debug.keystore" class="pure-input-1-2">
+            </div>
+
+            <div class="pure-control-group">
+                <label for="aliasName">Key Alias</label>
+                <input id="aliasName" type="text" placeholder="androiddebugkey" value="androiddebugkey"
+                       class="pure-input-1-2">
+            </div>
+            <div class="pure-control-group">
+                <label for="keysStorePassword">KeyStore Password</label>
+                <input id="keysStorePassword" type="password" placeholder="androiddebugkey" class="pure-input-1-2">
+            </div>
+
+            <div class="pure-controls">
+                <label for="cb" class="pure-checkbox">
+                    <input id="cb" type="checkbox"> I've read the terms and conditions
+                </label>
+
+                <a class="pure-button pure-button-primary" onclick="startSign()">Start Sign</a>
+                <a class="pure-button pure-button-primary" onclick="saveCurrentProfile()">Save
+                </a>
+                <a class="pure-button pure-button-primary" onclick="saveNewProfile()">Save New
+                    Profile
+                </a>
+            </div>
+        </fieldset>
+        <textarea id="output" placeholder="Textareas work too" rows="10"></textarea>
+    </form>
+</div>
+</body>
+<script type="text/javascript" src="jquery.min.js"></script>
+<script type="text/javascript">
+    // prevent default behavior from changing page on dropped file
+    var main = require("./main")
+    window.ondragover = function (e) {
+        e.preventDefault();
+        return false
+    };
+    window.ondrop = function (e) {
+        e.preventDefault();
+//        for (var i = 0; i < e.dataTransfer.files.length; ++i) {
+//            console.log(e.dataTransfer.files[i].path);
+//        }
+        return false;
+    }
+
+    window.onerror = function (msg, url, line, col, error) {
+        // Note that col & error are new to the HTML 5 spec and may not be
+        // supported in every browser.  It worked for me in Chrome.
+        var extra = !col ? '' : '\ncolumn: ' + col;
+        extra += !error ? '' : '\nerror: ' + error;
+
+        // You can view the information in an alert to see things working like this:
+        $("#output").val("Error: " + msg + "\nurl: " + url + "\nline: " + line + extra);
+
+        // TODO: Report this error via ajax so you can keep track
+        //       of what pages have JS issues
+
+        var suppressErrorAlert = true;
+        // If you return true, then error alerts (like in older versions of
+        // Internet Explorer) will be suppressed.
+        return false;
+    };
+
+    $("input[type=text],input[type=password]").on("drop", function (ev) {
+        ev.preventDefault();
+        var path;
+        for (var i = 0; i < ev.originalEvent.dataTransfer.files.length; ++i) {
+            path = ev.originalEvent.dataTransfer.files[i].path
+            break;
+        }
+        if (path) {
+            ev.target.value = path
+        }
+        return false;
+    })
+
+    function loadProfile() {
+        main.loadProfile(function (json) {
+            if (json) {
+                globalProfile = JSON.parse(json);
+                var $profile = $("#profile").empty()
+                $.each(globalProfile, function (k, v) {
+                    $("<option></option>").text(k).appendTo($profile).data("data", v);
+                })
+            }
+//
+        })
+    }
+
+    function startSign() {
+        var currentProfile = _getCurrentProfileFormData()
+        main.signApkWithPassword(
+                currentProfile["beSignedApkPath"],
+                currentProfile["signToWhere"],
+                currentProfile["keyStorePath"],
+                currentProfile["aliasName"],
+                currentProfile["keysStorePassword"]
+        )
+    }
+
+    function saveCurrentProfile() {
+        var currentProfileName = $("#profile").val()
+        if (typeof globalProfile === "undefined") {
+            globalProfile = {}
+        }
+        globalProfile[currentProfileName] = _getCurrentProfileFormData();
+        _saveProfile()
+    }
+
+
+    function saveNewProfile() {
+        var profileName = prompt("Input new profile name")
+        if (profileName) {
+            if (typeof globalProfile === "undefined") {
+                globalProfile = {}
+            }
+            globalProfile[profileName] = _getCurrentProfileFormData();
+            // save to temporary path.
+            _saveProfile()
+        }
+    }
+
+    function _saveProfile() {
+        main.writeProfileToJson(JSON.stringify(globalProfile))
+    }
+
+    function _loadProfileToForm(name) {
+        var form = globalProfile[name]
+        if (typeof form !== "undefined") {
+            $("#beSignedApkPath").val(form["beSignedApkPath"])
+            $("#signToWhere").val(form["signToWhere"])
+            $("#keyStorePath").val(form["keyStorePath"])
+            $("#aliasName").val(form["aliasName"])
+            $("#keysStorePassword").val(form["keysStorePassword"])
+        }
+    }
+
+    function _getCurrentProfileFormData() {
+        var form = {}
+        form["beSignedApkPath"] = $("#beSignedApkPath").val()
+        form["signToWhere"] = $("#signToWhere").val()
+        form["keyStorePath"] = $("#keyStorePath").val()
+        form["aliasName"] = $("#aliasName").val()
+        form["keysStorePassword"] = $("#keysStorePassword").val()
+        return form;
+    }
+
+
+    loadProfile();
+
+    $(function () {
+        $("#profile").on("change", function (ev) {
+//            console.log(ev.target.value)
+            _loadProfileToForm(ev.target.value)
+        })
+    })
+
+    var $output = $("output")
+    main.setStdoutOnData(function (data) {
+        $output.val($output.val() + "\n" + data)
+    })
+
+</script>
+</html>
