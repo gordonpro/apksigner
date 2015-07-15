@@ -127,6 +127,9 @@
                 $.each(globalProfile, function (k, v) {
                     $("<option></option>").text(k).appendTo($profile).data("data", v);
                 })
+                console.log("profile loaded")
+            } else {
+                console.log("no profile loaded")
             }
 //
         })
@@ -166,7 +169,13 @@
     }
 
     function _saveProfile() {
-        main.writeProfileToJson(JSON.stringify(globalProfile))
+        main.writeProfileToJson(JSON.stringify(globalProfile), function (err) {
+            if (!err) {
+                setTimeout(function () {
+                    loadProfile();
+                }, 100)
+            }
+        })
     }
 
     function _loadProfileToForm(name) {
@@ -194,10 +203,15 @@
     loadProfile();
 
     $(function () {
-        $("#profile").on("change", function (ev) {
+        var $profile = $("#profile").on("change", function (ev) {
 //            console.log(ev.target.value)
             _loadProfileToForm(ev.target.value)
         })
+        setTimeout(function(){
+            $profile.trigger("change")
+        }, 200)
+
+
     })
 
     var $output = $("output")

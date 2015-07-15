@@ -9,20 +9,28 @@ var child_process = require("child_process")
 
 var jsonFileName = "ad12834789a9x8791928z.mak1dljl11aj31"
 
-function writeProfileToJson(profileJsonData) {
+function writeProfileToJson(profileJsonData, callback) {
     var jsonPath = path.join(os.tmpdir(), jsonFileName)
     fs.writeFile(jsonPath, profileJsonData, function (err) {
-        if (err) throw err;
-        console.log('Profile saved to ' + jsonPath);
+        if (err){
+            callback(err)
+        }else{
+            console.log('Profile saved to ' + jsonPath);
+            callback()
+        }
     });
 }
 
 function loadProfile(callback) {
     var jsonPath = path.join(os.tmpdir(), jsonFileName)
-    fs.readFile(jsonPath, function (err, data) {
-        if (err) throw err;
-        callback(data.toString("utf-8"))
-    });
+    if(fs.existsSync(jsonPath)){
+        fs.readFile(jsonPath, function (err, data) {
+            if (err) throw err;
+            callback(data.toString("utf-8"))
+        });
+    }else{
+        callback(null)
+    }
 }
 
 
@@ -62,10 +70,10 @@ function signApk(be_sign_apk_path, sign_to_apk_path, key_store_path, key_store_a
 
 function setStdoutOnData(callback) {
     //process.stdout.on('data', callback);
-    process.stdout.on('data', function (data) {
-        console.log(data);
-        console.log("fuckkkk")
-    });
+    //process.stdout.on('data', function (data) {
+    //    console.log(data);
+    //    console.log("fuckkkk")
+    //});
 }
 
 
