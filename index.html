@@ -179,6 +179,9 @@
     }
 
     function _loadProfileToForm(name) {
+        if(typeof globalProfile === "undefined"){
+            return
+        }
         var form = globalProfile[name]
         if (typeof form !== "undefined") {
             $("#beSignedApkPath").val(form["beSignedApkPath"])
